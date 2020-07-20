@@ -49,65 +49,52 @@ my method 6
 -----------------------------------------or-------------------------------------
 my method 7
 dlib facial landmarks
-1.    haarcascade on face
+1.    get image, turn gray
 2.    facial landmarks
 3.    get landmark points for eyes
 4.    calculate EAR
 5.    see whether eye is open or closed based on EAR
+
 """
 # method 7
+def EyeDetector(image):
+    img = image
+    # multiple cascades: https://github.com/Itseez/opencv/tree/master/data/haarcascades
+    # https://github.com/Itseez/opencv/blob/master/data/haarcascades/haarcascade_frontalface_default.xml
+    face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 
-# helper functions
+    # https://github.com/AKSHAYUBHAT/TensorFace/blob/master/openface/models/dlib/shape_predictor_68_face_landmarks.dat
+    predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
+    # Constants
+    count = 0
+    min_EAR = 6
 
+    # 1.
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, 1.5, 5)
+    print("faces found = " + str(len(faces)))
+    for (x, y, w, h) in faces:
+        roi_gray = gray[y:y + h, x:x + w]
 
+        # 2.
+        dlib_rect = dlib.rectangle(int(x), int(y), int(x + w), int(y + h))
+        landmarks = predictor(gray, dlib_rect).parts()
+        landmarks = [[p.x, p.y] for p in landmarks]
 
+        # placing landmarks on image
+        for y, x in landmarks:
+            final_gray = HF.place_landmarks([y, x], img)
 
+        # 3. calculating right and left eye aspect ratios (EAR)
+        # for right eye: 36-41, for left: 42-47 (zero indexed)
+        average_EAR = HF.EAR(landmarks)
+        print("average = " + str(average_EAR))
 
+        # 4.
+        if average_EAR < min_EAR: return 1
+        else: return 0
 
-img = cv2.imread("face_photos/squint.jpg")
-# multiple cascades: https://github.com/Itseez/opencv/tree/master/data/haarcascades
-# https://github.com/Itseez/opencv/blob/master/data/haarcascades/haarcascade_frontalface_default.xml
-face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-
-# https://github.com/AKSHAYUBHAT/TensorFace/blob/master/openface/models/dlib/shape_predictor_68_face_landmarks.dat
-predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
-
-eyes_closed = 0
-
-# 1.
-gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-faces = face_cascade.detectMultiScale(gray, 1.5, 5)
-print("faces found = " + str(len(faces)))
-for (x, y, w, h) in faces:
-    roi_gray = gray[y:y + h, x:x + w]
-
-    HF.imshow("roi face gray", roi_gray)
-
-    dlib_rect = dlib.rectangle(int(x), int(y), int(x + w), int(y + h))
-    landmarks = predictor(gray, dlib_rect).parts()
-    landmarks = [[p.x, p.y] for p in landmarks]
-
-    # placing landmarks on image
-    for y, x in landmarks:
-        final_gray = HF.place_landmarks([y, x], img)
-    HF.imshow("final gray", final_gray)
-
-    # calculating right and left eye aspect ratios
-    # for right eye: 36-41, for left: 42-47 (zero indexed)
-
-    print(landmarks[1])
-    average_EAR = HF.EAR(landmarks)
-    print("average = " + str(average_EAR))
-
-    if average_EAR < 6: eyes_closed += 1
-    else: eyes_closed = 0
-
-    if eyes_closed > 10:
-        print("driver is drowsy!")
-        break
-
-cv2.destroyAllWindows()
 
 
 

@@ -19,58 +19,66 @@ method 1:
     - Get corners of BoundingBox and create line which represents avg line of the array 
 6. See if lines are past a certain point on the road or not to see if car is between lanes or not
 """
-# Constants
-blur_intensity = 5
-image_subsection = 3
-min_hits = 50
 
-# Initializing
-left_lane = 0
-right_lane = 0
+def LaneDetector(image):
+    # Constants
+    blur_intensity = 5
+    image_subsection = 3
+    min_hits = 50
 
-# 1. Get image, grayscale, blur, and Canny
-cimg = cv2.imread("road_photos/road2.jpg", 1)
-cimg2 = cimg
-img = cv2.cvtColor(cimg, cv2.COLOR_BGR2GRAY)
-img = cv2.GaussianBlur(img, (blur_intensity, blur_intensity), 0)
-img = cv2.Canny(img, 50, 200, None, 3)
+    # Initializing
+    left_lane = 0
+    right_lane = 0
 
-# 2. Apply filter mask and cut image
-masked = HF.region(img)
-cut = int(len(masked) * ((image_subsection-1) / image_subsection))
-img = masked[cut:]
+    # 1. Get image, grayscale, blur, and Canny
+    cimg = image
+    cimg2 = cimg
+    img = cv2.cvtColor(cimg, cv2.COLOR_BGR2GRAY)
+    img = cv2.GaussianBlur(img, (blur_intensity, blur_intensity), 0)
+    img = cv2.Canny(img, 50, 200, None, 3)
 
-# 3. Perform hough transform to get lines for lane of image
-lines = cv2.HoughLines(img, 1, np.pi / 180, min_hits, None, 0, 0)
-print("len of lines = " + str(len(lines)))
+    # 2. Apply filter mask and cut image
+    masked = HF.region(img)
+    cut = int(len(masked) * ((image_subsection-1) / image_subsection))
+    img = masked[cut:]
 
-# Draw the lines
-if lines is not None:
-    # For every line...
-    for i in range(0, len(lines)):
-        rho = lines[i][0][0]
-        theta = lines[i][0][1]
-        a = math.cos(theta)
-        b = math.sin(theta)
-        x0 = a * rho
-        y0 = b * rho
-        line = Line()
-        line.p1 = (int(x0 + 1000 * (-b)), int(y0 + 1000 * (a)) + cut)
-        line.p2 = (int(x0 - 1000 * (-b)), int(y0 - 1000 * (a)) + cut)
-        cv2.line(cimg, line.p1, line.p2, (0, 0, 255), 3, cv2.LINE_AA)
-        print(left_lane)
-        # 5. Get one line for each lane, first identify whether each line is left or right lane
-        right_lane, left_lane = HF.r_or_l(right_lane, left_lane, line.p1, line.p2)
+    # 3. Perform hough transform to get lines for lane of image
+    lines = cv2.HoughLines(img, 1, np.pi / 180, min_hits, None, 0, 0)
+    print("len of lines = " + str(len(lines)))
 
-l = Line()
-r = Line()
-print(left_lane)
-l.p1, l.p2 = HF.average_line(left_lane)
-r.p1, r.p2 = HF.average_line(right_lane)
+    # Draw the lines
+    if lines is not None:
+        # For every line...
+        for i in range(0, len(lines)):
+            rho = lines[i][0][0]
+            theta = lines[i][0][1]
+            a = math.cos(theta)
+            b = math.sin(theta)
+            x0 = a * rho
+            y0 = b * rho
+            line = Line()
+            line.p1 = (int(x0 + 1000 * (-b)), int(y0 + 1000 * (a)) + cut)
+            line.p2 = (int(x0 - 1000 * (-b)), int(y0 - 1000 * (a)) + cut)
+            cv2.line(cimg, line.p1, line.p2, (0, 0, 255), 3, cv2.LINE_AA)
+            print(left_lane)
+            # 5. Get one line for each lane, first identify whether each line is left or right lane
+            right_lane, left_lane = HF.r_or_l(right_lane, left_lane, line.p1, line.p2)
 
-cv2.line(cimg2, l.p1, l.p2, (0, 0, 0), 3, cv2.LINE_AA)
-cv2.line(cimg2, r.p1, r.p2, (0, 0, 0), 3, cv2.LINE_AA)
-HF.imshow("yeahhhhhh", cimg2)
+    l = Line()
+    r = Line()
+    print(left_lane)
+    l.p1, l.p2 = HF.average_line(left_lane)
+    r.p1, r.p2 = HF.average_line(right_lane)
+
+    cv2.line(cimg2, l.p1, l.p2, (0, 0, 0), 3, cv2.LINE_AA)
+    cv2.line(cimg2, r.p1, r.p2, (0, 0, 0), 3, cv2.LINE_AA)
+    HF.imshow("yeahhhhhh", cimg2)
+
+    if len(right_lane) == 0 or len(left_lane) == 0:
+        return 1
+    else: return 0
+
+
 """
 HF.imshow("Detected Lines (in red) - Standard Hough Line Transform", cimg)
 
